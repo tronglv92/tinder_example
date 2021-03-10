@@ -4,8 +4,10 @@ import 'package:tinder_example/profiles_page/pick_option.dart';
 const Color colorLike = Color.fromRGBO(110, 227, 180, 1.0);
 const Color colorNope = Color.fromRGBO(236, 82, 136, 1.0);
 class CardProfile extends StatelessWidget {
-  CardProfile({this.profile});
+  CardProfile({this.profile,this.likeOpacity=0,this.nopeOpacity=0});
   final Profile profile;
+  final double likeOpacity;
+  final double nopeOpacity;
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -26,22 +28,28 @@ class CardProfile extends StatelessWidget {
             Positioned(
                 top: 15,
                 left: 15,
-                child: PickOption(
-                  color: colorLike,
-                  text: "LIKE",
+                child: Opacity(
+                  opacity: likeOpacity,
+                  child: PickOption(
+                    color: colorLike,
+                    text: "LIKE",
+                  ),
                 )),
             Positioned(
                 right: 15,
                 top: 15,
-                child: PickOption(
-                  color: colorNope,
-                  text: "NOPE",
+                child: Opacity(
+                  opacity: nopeOpacity,
+                  child: PickOption(
+                    color: colorNope,
+                    text: "NOPE",
+                  ),
                 )),
             Positioned(
                 bottom: 15,
                 left: 15,
                 child: Text(
-                  profile.name,
+                  profile.id,
                   style: TextStyle(
                       fontSize: 30,
                       color: Colors.white,
