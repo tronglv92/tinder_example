@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:tinder_example/test/test_dragger.dart';
+import 'package:tinder_example/pages/detail_profile_page/detail_profile_page.dart';
 
-import 'profiles_page/profiles_page.dart';
+import 'pages/profiles_page/profiles_page.dart';
+
 
 void main() {
   runApp(MyApp());
@@ -16,7 +17,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
 
       ),
-      home: ProfilesPage(),
+      home: DetailProfilePage(),
     );
   }
 }

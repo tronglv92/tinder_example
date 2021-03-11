@@ -3,11 +3,12 @@ import 'package:flutter/physics.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:interpolate/interpolate.dart';
 import 'package:tinder_example/models/profile.dart';
-import 'package:tinder_example/profiles_page/circle_white.dart';
+
 import 'package:tinder_example/widgets/appbar_empty.dart';
 import 'dart:math' as math;
 
 import 'card_profile/card_profile.dart';
+import 'circle_white.dart';
 
 const Color backgroundColor = Color.fromRGBO(251, 250, 255, 1.0);
 const double HEIGHT_HEADER = 80;
