@@ -2,19 +2,21 @@ import 'package:flutter/material.dart';
 class PickOption extends StatelessWidget {
   final Color color;
   final String text;
-  PickOption({this.color,this.text});
+  final double widthBorder;
+  final double fontSize;
+  PickOption({this.color,this.text,this.widthBorder=4,this.fontSize=24});
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.all(8),
       decoration: BoxDecoration(
         border:
-        Border.all(width: 4, color: color),
+        Border.all(width: widthBorder, color: color),
       ),
       child: Text(
         text,
         style: TextStyle(
-            fontSize: 24, color: color,fontWeight: FontWeight.bold),
+            fontSize: fontSize, color: color,fontWeight: FontWeight.bold),
       ),
     );
   }

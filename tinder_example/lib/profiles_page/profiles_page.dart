@@ -4,16 +4,19 @@ import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:interpolate/interpolate.dart';
 import 'package:tinder_example/models/profile.dart';
 import 'package:tinder_example/profiles_page/circle_white.dart';
-import 'package:tinder_example/profiles_page/pick_option.dart';
 import 'package:tinder_example/widgets/appbar_empty.dart';
 import 'dart:math' as math;
 
-import 'card_profile.dart';
+import 'card_profile/card_profile.dart';
 
 const Color backgroundColor = Color.fromRGBO(251, 250, 255, 1.0);
 const double HEIGHT_HEADER = 80;
 const double HEIGHT_FOOTER = 80;
-const double SIZE_SMALLER = 15;
+const double SIZE_SMALLER = 10;
+const int DURATION_SWIPE = 300;
+
+const double UPPER_BOUND = 500;
+const double LOWER_BOUND = -500;
 
 class ProfilesPage extends StatefulWidget {
   @override
@@ -22,58 +25,49 @@ class ProfilesPage extends StatefulWidget {
 
 class _ProfilesPageState extends State<ProfilesPage>
     with TickerProviderStateMixin {
-  List<Profile> profiles = [
-    Profile(
-      id: "1",
-      name: "Caroline",
-      age: 24,
-      profile: "assets/profiles/1.jpeg",
-    ),
-    Profile(
-      id: "2",
-      name: "Jack",
-      age: 30,
-      profile: "assets/profiles/2.jpeg",
-    ),
-    Profile(
-      id: "3",
-      name: "Caroline",
-      age: 21,
-      profile: "assets/profiles/3.jpeg",
-    ),
-    Profile(
-      id: "4",
-      name: "Caroline",
-      age: 40,
-      profile: "assets/profiles/4.jpg",
-    ),
-  ];
+  List<Profile> profilesUser = profiles;
 
   double translationX = 0;
   double translationY = HEIGHT_HEADER;
 
   Interpolate ipRotation;
+  Interpolate ipRotationY;
   Interpolate ipLikeOpacity;
   Interpolate ipNopeOpacity;
+  Interpolate ipSuperLikeOpacity;
 
   //Card remain
   Interpolate ipHeightCardRemain;
   Interpolate ipWidthCardRemain;
   Interpolate ipTopCardRemain;
+  Interpolate ipLeftCardRemain;
 
+  // Animation PullBack
   AnimationController _controllerSpringX;
-  SpringSimulation _springSimulationX;
   Animation<double> _animationSpringX;
-
   AnimationController _controllerSpringY;
-  SpringSimulation _springSimulationY;
   Animation<double> _animationSpringY;
 
+  //end
+
+  // Animation Swipe
+  AnimationController _controllerSwipeX;
+  Animation<double> _curveSwipeX;
+  Animation<double> _animationSwipeX;
+  AnimationController _controllerSwipeY;
+  Animation<double> _curveSwipeY;
+  Animation<double> _animationSwipeY;
+
+  //end
   double translationThreshold = 0;
-  double snapPoint = 0;
-
+  double translationYThreshold = HEIGHT_HEADER;
+  double snapPointX = 0;
+  double snapPointY = HEIGHT_HEADER;
   double rotatedWidth = 0;
+  double rotatedHeight = 0;
 
+
+  int indexProfileSelected=0;
 
 
   @override
@@ -84,6 +78,7 @@ class _ProfilesPageState extends State<ProfilesPage>
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       initAnimation();
     });
+
   }
 
   @override
@@ -92,19 +87,34 @@ class _ProfilesPageState extends State<ProfilesPage>
     super.dispose();
     _controllerSpringX?.dispose();
     _controllerSpringY?.dispose();
+    _controllerSwipeX?.dispose();
+    _controllerSwipeY?.dispose();
   }
 
   void initAnimation() {
     final Size size = MediaQuery.of(context).size;
     final double statusBarHeight = MediaQuery.of(context).padding.top;
-    translationThreshold = size.width / 2;
-    rotatedWidth = size.width/2 * math.sin(toRadians(90 - 15)) +
-        size.height/2 * math.sin(toRadians(15));
     final double heightOfCard =
         size.height - HEIGHT_HEADER - HEIGHT_FOOTER - statusBarHeight;
+
+    translationThreshold = size.width / 2;
+    translationYThreshold = size.height / 4;
+    rotatedWidth = size.width * math.sin(toRadians(90 - 15)) +
+        size.height * math.sin(toRadians(15));
+    rotatedHeight = size.height * math.sin(toRadians(90 - 7)) +
+        size.width * math.sin(toRadians(7));
+
     ipRotation = Interpolate(
       inputRange: [-size.width / 2, size.width / 2],
       outputRange: [toRadians(15), toRadians(-15)],
+      extrapolate: Extrapolate.clamp,
+    );
+    ipRotationY = Interpolate(
+      inputRange: [
+        -size.height / 2 + HEIGHT_HEADER,
+        size.height / 2 + HEIGHT_HEADER
+      ],
+      outputRange: [toRadians(-7), toRadians(7)],
       extrapolate: Extrapolate.clamp,
     );
     ipLikeOpacity = Interpolate(
@@ -117,119 +127,270 @@ class _ProfilesPageState extends State<ProfilesPage>
       outputRange: [1, 0],
       extrapolate: Extrapolate.clamp,
     );
-    //REMAIN CARD
-    ipHeightCardRemain = Interpolate(
-      inputRange: [-translationThreshold, 0, translationThreshold],
-      outputRange: [heightOfCard, heightOfCard - SIZE_SMALLER, heightOfCard],
+    ipSuperLikeOpacity = Interpolate(
+      inputRange: [
+        -size.height / 4,
+        0,
+        HEIGHT_HEADER,
+      ],
+      outputRange: [1, 0, 0],
       extrapolate: Extrapolate.clamp,
     );
+    //REMAIN CARD
+
+    // List<double> inputRange = directionHorizontal == true
+    //     ? [-size.width / 4, 0, size.width / 4]
+    //     : [
+    //   -80,
+    //   0,
+    //   80
+    // ];
+    List<double> inputRange =[-size.width / 4, 0, size.width / 4];
+    ipHeightCardRemain = Interpolate(
+      inputRange: inputRange,
+      outputRange: [
+        heightOfCard,
+        heightOfCard - 2 * SIZE_SMALLER,
+        heightOfCard
+      ],
+      extrapolate: Extrapolate.clamp,
+    );
+
     ipWidthCardRemain = Interpolate(
-      inputRange: [-translationThreshold, 0, translationThreshold],
-      outputRange: [size.width, size.width - SIZE_SMALLER, size.width],
+      inputRange: inputRange,
+      outputRange: [size.width, size.width - 2 * SIZE_SMALLER, size.width],
       extrapolate: Extrapolate.clamp,
     );
     ipTopCardRemain = Interpolate(
-      inputRange: [-translationThreshold,0, translationThreshold],
-      outputRange: [HEIGHT_HEADER,HEIGHT_HEADER + SIZE_SMALLER, HEIGHT_HEADER],
+      inputRange: inputRange,
+      outputRange: [HEIGHT_HEADER, HEIGHT_HEADER + SIZE_SMALLER, HEIGHT_HEADER],
       extrapolate: Extrapolate.clamp,
     );
-    _controllerSpringX =
-        AnimationController(vsync: this, lowerBound: -500, upperBound: 500)
-          ..addListener(() {
-            this.setState(() {
-              translationX = _animationSpringX?.value;
-            });
-          })
-          ..addStatusListener((AnimationStatus status) {
-          
-            if (status == AnimationStatus.completed) {
+    ipLeftCardRemain = Interpolate(
+      inputRange: inputRange,
+      outputRange: [0, SIZE_SMALLER, 0],
+      extrapolate: Extrapolate.clamp,
+    );
+    // Controller pull back
+    _controllerSpringX = AnimationController(
+        vsync: this, lowerBound: LOWER_BOUND, upperBound: UPPER_BOUND)
+      ..addListener(() {
+        this.setState(() {
+          translationX = _animationSpringX?.value;
+        });
+      });
+    _controllerSpringY = AnimationController(
+        vsync: this, lowerBound: LOWER_BOUND, upperBound: UPPER_BOUND)
+      ..addListener(() {
+        this.setState(() {
+          translationY = _animationSpringY?.value;
+        });
+      });
 
-              swipeCard();
-            }
-          });
-    _controllerSpringY =
-        AnimationController(vsync: this, lowerBound: -500, upperBound: 500)
-          ..addListener(() {
-            this.setState(() {
-              translationY = _animationSpringY?.value;
-            });
-          });
+    //Controller Swipe
+
+    _controllerSwipeX = AnimationController(
+        vsync: this, duration: Duration(milliseconds: DURATION_SWIPE))
+      ..addListener(() {
+        this.setState(() {
+          translationX =
+              _animationSwipeX != null ? _animationSwipeX.value : translationX;
+        });
+      })
+      ..addStatusListener((status) {
+        print("AnimationStatus.completed erere");
+        if (status == AnimationStatus.completed ) {
+          swipeCard();
+        }
+      });
+    _curveSwipeX =
+        CurvedAnimation(parent: _controllerSwipeX, curve: Curves.ease);
+
+    _controllerSwipeY = AnimationController(
+        vsync: this, duration: Duration(milliseconds: DURATION_SWIPE))
+      ..addListener(() {
+        this.setState(() {
+          translationY =
+              _animationSwipeY != null ? _animationSwipeY.value : translationY;
+        });
+      });
+    _curveSwipeY =
+        CurvedAnimation(parent: _controllerSwipeY, curve: Curves.ease);
+    // _animationSwipeY = Tween(begin: -200.0, end: 0.0).animate(curveSwipeY);
   }
 
   void swipeCard() {
-    if (snapPoint == -rotatedWidth || snapPoint == rotatedWidth) {
-      _controllerSpringY?.stop();
-      _controllerSpringX?.stop();
+    if (snapPointX == -rotatedWidth || snapPointX == rotatedWidth || snapPointY== -rotatedHeight) {
+      print("AnimationStatus.completed erere 2");
+      _controllerSwipeY?.stop();
+      _controllerSwipeX?.stop();
       setState(() {
         translationX = 0;
+        indexProfileSelected=0;
         translationY = HEIGHT_HEADER;
-        profiles.removeLast();
+        profilesUser.removeLast();
       });
     }
   }
 
-  void runAnimateSpringX() {
-    _animationSpringX =
-        _controllerSpringX.drive(Tween(begin: translationX, end: snapPoint));
-    const springDescription = SpringDescription(
-      damping: 20,
-      mass: 1,
-      stiffness: 100,
-    );
-    _springSimulationX = SpringSimulation(springDescription, 0, 1, 100);
-    _controllerSpringX?.animateWith(_springSimulationX);
+  void runAnimatedSwipe() {
+    _animationSwipeX =
+        Tween(begin: translationX, end: snapPointX).animate(_curveSwipeX);
+    _animationSwipeY =
+        Tween(begin: translationY, end: snapPointY).animate(_curveSwipeY);
+
+    _controllerSwipeX?.reset();
+    _controllerSwipeY?.reset();
+
+    _controllerSwipeX?.forward();
+    _controllerSwipeY?.forward();
   }
 
-  void runAnimateSpringY() {
-    _animationSpringY = _controllerSpringY
-        .drive(Tween(begin: translationY, end: HEIGHT_HEADER));
+  void runAnimatedPullBack() {
     const springDescription = SpringDescription(
       damping: 20,
       mass: 1,
       stiffness: 100,
     );
-    _springSimulationY = SpringSimulation(springDescription, 0, 1, 100);
-    _controllerSpringY?.animateWith(_springSimulationY);
+    final _springSimulation = SpringSimulation(springDescription, 0, 1, 100);
+
+    _animationSpringX =
+        _controllerSpringX.drive(Tween(begin: translationX, end: snapPointX));
+    _animationSpringY =
+        _controllerSpringY.drive(Tween(begin: translationY, end: snapPointY));
+
+    _controllerSpringX?.animateWith(_springSimulation);
+
+    _controllerSpringY?.animateWith(_springSimulation);
   }
 
   double toRadians(int degree) {
     return (math.pi * degree) / 180;
   }
 
+  GestureDetector _onGesture({Widget child,Profile lastProfile}) {
+    final Size size=MediaQuery.of(context).size;
+    if(lastProfile!=null)
+      {
+        return GestureDetector(
+            onPanDown: (DragDownDetails dragDown) {
+
+              _controllerSpringY?.stop();
+              _controllerSpringX?.stop();
+              _controllerSwipeX?.stop();
+              _controllerSwipeY?.stop();
+            },
+            onPanStart: (DragStartDetails dragStart) {},
+            onPanUpdate: (DragUpdateDetails dragDetail) {
+
+
+              setState(() {
+                translationX = translationX + dragDetail.delta.dx;
+                translationY = translationY + dragDetail.delta.dy;
+              });
+            },
+            onPanEnd: (DragEndDetails dragEnd) {
+              if (translationY < -translationYThreshold) {
+                snapPointY = -rotatedHeight;
+                runAnimatedSwipe();
+              } else {
+                snapPointY = HEIGHT_HEADER;
+                if (translationX < -translationThreshold) {
+                  snapPointX = -rotatedWidth;
+                  runAnimatedSwipe();
+                } else {
+                  if (translationX > translationThreshold) {
+                    snapPointX = rotatedWidth;
+                    runAnimatedSwipe();
+                  } else {
+                    snapPointX = 0;
+
+                    runAnimatedPullBack();
+                  }
+                }
+              }
+            },
+
+            onTapUp: (TapUpDetails detail){
+
+
+              if(detail.localPosition.dx<size.width/2){
+                if(indexProfileSelected>0)
+                  {
+                    setState(() {
+                      indexProfileSelected--;
+                    });
+                  }
+
+
+              }
+              else
+              {
+                if(indexProfileSelected<lastProfile.profiles.length-1 )
+                {
+                  setState(() {
+                    indexProfileSelected++;
+                  });
+
+                }
+
+              }
+
+            },
+            child: child);
+      }
+    else
+      {
+        return child;
+      }
+
+  }
+
   Widget _buildListCard() {
     List<Profile> profilesRemain = [];
     Profile lastProfile;
 
-    if (profiles.length > 0) {
-      if (profiles.length <= 1) {
+    if (profilesUser.length > 0) {
+      if (profilesUser.length <= 1) {
         profilesRemain = [];
-        lastProfile = profiles[profiles.length - 1];
+        lastProfile = profilesUser[profilesUser.length - 1];
       } else {
-        profilesRemain = profiles.getRange(0, profiles.length - 1).toList();
-        lastProfile = profiles[profiles.length - 1];
+        profilesRemain =
+            profilesUser.getRange(0, profilesUser.length - 1).toList();
+        lastProfile = profilesUser[profilesUser.length - 1];
       }
     }
 
     final Size size = MediaQuery.of(context).size;
     final double statusBarHeight = MediaQuery.of(context).padding.top;
 
-    double rotateZ = ipRotation != null ? ipRotation.eval(translationX) : 0;
+    double rotateX = ipRotation != null ? ipRotation.eval(translationX) : 0;
+    double rotateY = ipRotationY != null ? ipRotationY.eval(translationY) : 0;
+
+    double rotateZ = rotateX + rotateY;
     double likeOpacity =
         ipLikeOpacity != null ? ipLikeOpacity.eval(translationX) : 0;
     double nopeOpacity =
         ipNopeOpacity != null ? ipNopeOpacity.eval(translationX) : 0;
+    double superLikeOpacity =
+        ipSuperLikeOpacity != null ? ipSuperLikeOpacity.eval(translationY) : 0;
+
+    double valueTranslation =math.sqrt(translationX*translationX+(translationY-HEIGHT_HEADER)*(translationY-HEIGHT_HEADER));
 
     double heightOfCard =
         size.height - HEIGHT_HEADER - HEIGHT_FOOTER - statusBarHeight;
     double heightCardRemain = ipHeightCardRemain != null
-        ? ipHeightCardRemain.eval(translationX)
+        ? ipHeightCardRemain.eval(valueTranslation)
         : heightOfCard - SIZE_SMALLER;
     double widthCardRemain = ipWidthCardRemain != null
-        ? ipWidthCardRemain.eval(translationX)
+        ? ipWidthCardRemain.eval(valueTranslation)
         : size.width - SIZE_SMALLER;
     double topCardRemain = ipTopCardRemain != null
-        ? ipTopCardRemain.eval(translationX)
+        ? ipTopCardRemain.eval(valueTranslation)
         : HEIGHT_HEADER + SIZE_SMALLER;
+    double leftCardRemain =
+        ipLeftCardRemain != null ? ipLeftCardRemain.eval(valueTranslation) : 15;
+
 
     return Positioned.fill(
       child: Stack(
@@ -240,7 +401,8 @@ class _ProfilesPageState extends State<ProfilesPage>
                 top: topCardRemain,
                 height: heightCardRemain,
                 width: widthCardRemain,
-                child: CardProfile(profile: profilesRemain[i])),
+                left: leftCardRemain,
+                child: CardProfile(profile: profilesRemain[i],widthCard: widthCardRemain,heightCard: heightCardRemain,)),
           //Last Card
           lastProfile != null
               ? Positioned(
@@ -248,40 +410,18 @@ class _ProfilesPageState extends State<ProfilesPage>
                   left: translationX,
                   height: heightOfCard,
                   width: size.width,
-                  child: GestureDetector(
-                      onPanDown: (DragDownDetails dragDown) {
-                        _controllerSpringY?.stop();
-                        _controllerSpringX?.stop();
-                      },
-                      onPanStart: (DragStartDetails dragStart) {},
-                      onPanUpdate: (DragUpdateDetails dragDetail) {
-
-                        print("DragUpdateDetails of "+lastProfile.id.toString());
-                        setState(() {
-                          translationX = translationX + dragDetail.delta.dx;
-                          translationY = translationY + dragDetail.delta.dy;
-                        });
-                      },
-                      onPanEnd: (DragEndDetails dragEnd) {
-                        if (translationX < -translationThreshold) {
-                          snapPoint = -rotatedWidth;
-                        } else {
-                          if (translationX > translationThreshold) {
-                            snapPoint = rotatedWidth;
-                          } else {
-                            snapPoint = 0;
-                          }
-                        }
-
-                        runAnimateSpringX();
-                        runAnimateSpringY();
-                      },
+                  child: _onGesture(
+                    lastProfile: lastProfile,
                       child: Transform.rotate(
                           angle: rotateZ,
                           child: CardProfile(
                             profile: lastProfile,
                             likeOpacity: likeOpacity,
                             nopeOpacity: nopeOpacity,
+                            superLikeOpacity: superLikeOpacity,
+                            widthCard: size.width,
+                            heightCard: heightOfCard,
+                            indexSelected: indexProfileSelected,
                           ))),
                 )
               : Container()
@@ -296,12 +436,9 @@ class _ProfilesPageState extends State<ProfilesPage>
       backgroundColor: backgroundColor,
       child: Stack(
         children: [
+          _buildHeader(),
           Column(
-            children: [
-              _buildHeader(),
-              Expanded(child: Container()),
-              _buildFooter()
-            ],
+            children: [Expanded(child: Container()), _buildFooter()],
           ),
           _buildListCard()
         ],
