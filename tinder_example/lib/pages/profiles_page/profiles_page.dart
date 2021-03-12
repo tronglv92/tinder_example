@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:interpolate/interpolate.dart';
+import 'package:page_transition/page_transition.dart';
 import 'package:tinder_example/models/profile.dart';
+import 'package:tinder_example/pages/detail_profile_page/detail_profile_page.dart';
 
 import 'package:tinder_example/widgets/appbar_empty.dart';
 import 'dart:math' as math;
@@ -67,19 +69,18 @@ class _ProfilesPageState extends State<ProfilesPage>
   double rotatedWidth = 0;
   double rotatedHeight = 0;
 
-
-  int indexProfileSelected=0;
-
+  int indexProfileSelected = 0;
+  PageController _pageController;
 
   @override
   void initState() {
     // TODO: implement initState
 
     super.initState();
+    _pageController=PageController(initialPage: 0);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       initAnimation();
     });
-
   }
 
   @override
@@ -146,7 +147,7 @@ class _ProfilesPageState extends State<ProfilesPage>
     //   0,
     //   80
     // ];
-    List<double> inputRange =[-size.width / 4, 0, size.width / 4];
+    List<double> inputRange = [-size.width / 4, 0, size.width / 4];
     ipHeightCardRemain = Interpolate(
       inputRange: inputRange,
       outputRange: [
@@ -200,7 +201,7 @@ class _ProfilesPageState extends State<ProfilesPage>
       })
       ..addStatusListener((status) {
         print("AnimationStatus.completed erere");
-        if (status == AnimationStatus.completed ) {
+        if (status == AnimationStatus.completed) {
           swipeCard();
         }
       });
@@ -221,16 +222,19 @@ class _ProfilesPageState extends State<ProfilesPage>
   }
 
   void swipeCard() {
-    if (snapPointX == -rotatedWidth || snapPointX == rotatedWidth || snapPointY== -rotatedHeight) {
+    if (snapPointX == -rotatedWidth ||
+        snapPointX == rotatedWidth ||
+        snapPointY == -rotatedHeight) {
       print("AnimationStatus.completed erere 2");
       _controllerSwipeY?.stop();
       _controllerSwipeX?.stop();
       setState(() {
         translationX = 0;
-        indexProfileSelected=0;
+        indexProfileSelected = 0;
         translationY = HEIGHT_HEADER;
         profilesUser.removeLast();
       });
+      _pageController?.jumpToPage(0);
     }
   }
 
@@ -269,82 +273,77 @@ class _ProfilesPageState extends State<ProfilesPage>
     return (math.pi * degree) / 180;
   }
 
-  GestureDetector _onGesture({Widget child,Profile lastProfile}) {
-    final Size size=MediaQuery.of(context).size;
-    if(lastProfile!=null)
-      {
-        return GestureDetector(
-            onPanDown: (DragDownDetails dragDown) {
-
-              _controllerSpringY?.stop();
-              _controllerSpringX?.stop();
-              _controllerSwipeX?.stop();
-              _controllerSwipeY?.stop();
-            },
-            onPanStart: (DragStartDetails dragStart) {},
-            onPanUpdate: (DragUpdateDetails dragDetail) {
-
-
-              setState(() {
-                translationX = translationX + dragDetail.delta.dx;
-                translationY = translationY + dragDetail.delta.dy;
-              });
-            },
-            onPanEnd: (DragEndDetails dragEnd) {
-              if (translationY < -translationYThreshold) {
-                snapPointY = -rotatedHeight;
+  GestureDetector _onGesture({Widget child, Profile lastProfile}) {
+    final Size size = MediaQuery.of(context).size;
+    if (lastProfile != null) {
+      return GestureDetector(
+          onPanDown: (DragDownDetails dragDown) {
+            _controllerSpringY?.stop();
+            _controllerSpringX?.stop();
+            _controllerSwipeX?.stop();
+            _controllerSwipeY?.stop();
+          },
+          onPanStart: (DragStartDetails dragStart) {},
+          onPanUpdate: (DragUpdateDetails dragDetail) {
+            setState(() {
+              translationX = translationX + dragDetail.delta.dx;
+              translationY = translationY + dragDetail.delta.dy;
+            });
+          },
+          onPanEnd: (DragEndDetails dragEnd) {
+            if (translationY < -translationYThreshold) {
+              snapPointY = -rotatedHeight;
+              runAnimatedSwipe();
+            } else {
+              snapPointY = HEIGHT_HEADER;
+              if (translationX < -translationThreshold) {
+                snapPointX = -rotatedWidth;
                 runAnimatedSwipe();
               } else {
-                snapPointY = HEIGHT_HEADER;
-                if (translationX < -translationThreshold) {
-                  snapPointX = -rotatedWidth;
+                if (translationX > translationThreshold) {
+                  snapPointX = rotatedWidth;
                   runAnimatedSwipe();
                 } else {
-                  if (translationX > translationThreshold) {
-                    snapPointX = rotatedWidth;
-                    runAnimatedSwipe();
-                  } else {
-                    snapPointX = 0;
+                  snapPointX = 0;
 
-                    runAnimatedPullBack();
-                  }
+                  runAnimatedPullBack();
                 }
               }
-            },
-
-            onTapUp: (TapUpDetails detail){
-
-
-              if(detail.localPosition.dx<size.width/2){
-                if(indexProfileSelected>0)
-                  {
-                    setState(() {
-                      indexProfileSelected--;
-                    });
-                  }
-
+            }
+          },
+          onTapUp: (TapUpDetails detail) {
+            // LEFT TAP
+            if (detail.localPosition.dx < size.width / 2) {
+              if (indexProfileSelected > 0) {
+                // setState(() {
+                //   indexProfileSelected--;
+                // });
+                indexProfileSelected--;
+                _pageController.jumpToPage(indexProfileSelected);
 
               }
-              else
-              {
-                if(indexProfileSelected<lastProfile.profiles.length-1 )
-                {
-                  setState(() {
-                    indexProfileSelected++;
-                  });
-
-                }
+            }
+            // RIGHT TAP
+            else {
+              if (indexProfileSelected < lastProfile.profiles.length - 1) {
+                indexProfileSelected++;
+                _pageController.jumpToPage(indexProfileSelected);
 
               }
+            }
+          },
+          child: child);
+    } else {
+      return child;
+    }
+  }
 
-            },
-            child: child);
-      }
-    else
-      {
-        return child;
-      }
-
+  void onPressDetail(Profile profile) {
+    Navigator.push(
+        context,
+        PageTransition(
+            type: PageTransitionType.fade,
+            child: DetailProfilePage(profile: profile)));
   }
 
   Widget _buildListCard() {
@@ -376,7 +375,8 @@ class _ProfilesPageState extends State<ProfilesPage>
     double superLikeOpacity =
         ipSuperLikeOpacity != null ? ipSuperLikeOpacity.eval(translationY) : 0;
 
-    double valueTranslation =math.sqrt(translationX*translationX+(translationY-HEIGHT_HEADER)*(translationY-HEIGHT_HEADER));
+    double valueTranslation = math.sqrt(translationX * translationX +
+        (translationY - HEIGHT_HEADER) * (translationY - HEIGHT_HEADER));
 
     double heightOfCard =
         size.height - HEIGHT_HEADER - HEIGHT_FOOTER - statusBarHeight;
@@ -392,18 +392,22 @@ class _ProfilesPageState extends State<ProfilesPage>
     double leftCardRemain =
         ipLeftCardRemain != null ? ipLeftCardRemain.eval(valueTranslation) : 15;
 
-
     return Positioned.fill(
       child: Stack(
         fit: StackFit.expand,
         children: [
+          // remain card
           for (int i = 0; i < profilesRemain.length; i++)
             Positioned(
                 top: topCardRemain,
                 height: heightCardRemain,
                 width: widthCardRemain,
                 left: leftCardRemain,
-                child: CardProfile(profile: profilesRemain[i],widthCard: widthCardRemain,heightCard: heightCardRemain,)),
+                child: CardProfile(
+                  profile: profilesRemain[i],
+                  widthCard: widthCardRemain,
+                  heightCard: heightCardRemain,
+                )),
           //Last Card
           lastProfile != null
               ? Positioned(
@@ -412,7 +416,7 @@ class _ProfilesPageState extends State<ProfilesPage>
                   height: heightOfCard,
                   width: size.width,
                   child: _onGesture(
-                    lastProfile: lastProfile,
+                      lastProfile: lastProfile,
                       child: Transform.rotate(
                           angle: rotateZ,
                           child: CardProfile(
@@ -422,7 +426,10 @@ class _ProfilesPageState extends State<ProfilesPage>
                             superLikeOpacity: superLikeOpacity,
                             widthCard: size.width,
                             heightCard: heightOfCard,
-                            indexSelected: indexProfileSelected,
+
+                            onPressDetail: onPressDetail,
+                            pageController: _pageController,
+                            lastCard: true,
                           ))),
                 )
               : Container()

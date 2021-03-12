@@ -30,6 +30,7 @@ dependencies:
   cupertino_icons: ^1.0.2
   flutter_vector_icons: ^1.0.0
   interpolate: ^1.0.2+2
+  page_transition: "^1.1.7+6"
 
 dev_dependencies:
   flutter_test:
