@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:tinder_example/models/profile.dart';
 import 'package:tinder_example/pages/profiles_page/card_profile/indicator_tab.dart';
+import 'package:tinder_example/pages/profiles_page/card_profile/name_hero.dart';
 import 'package:tinder_example/pages/profiles_page/pick_option.dart';
 
-import '../photo_hero.dart';
+import 'age_hero.dart';
+import 'photo_hero.dart';
 
 const Color colorLike = Color.fromRGBO(110, 227, 180, 1.0);
 const Color colorNope = Color.fromRGBO(236, 82, 136, 1.0);
@@ -43,7 +45,7 @@ class _CardProfileState extends State<CardProfile> {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10),
-        color: Colors.black,
+        color: Colors.white,
       ),
       margin: EdgeInsets.symmetric(horizontal: 15),
       child: Stack(
@@ -60,10 +62,8 @@ class _CardProfileState extends State<CardProfile> {
                     controller: widget.pageController,
                     physics: NeverScrollableScrollPhysics(),
                     itemBuilder: (BuildContext context, int index) {
-                      return Image.asset(
-                        widget.profile.profiles[index],
-                        fit: BoxFit.cover,
-                      );
+
+                      return PhotoHero(profile: widget.profile,index: index,);
                     },
                     itemCount: widget.profile.profiles.length,
                     onPageChanged: (int page) {
@@ -85,17 +85,30 @@ class _CardProfileState extends State<CardProfile> {
 
   Widget _buildInfo() {
     return Positioned(
-        bottom: 15,
-        left: 15,
+        bottom: 0,
+
+        left: 0,
+        width: widget.widthCard,
+
         child: GestureDetector(
           onTap: () {
             if (widget.onPressDetail != null)
               widget.onPressDetail(widget.profile);
           },
-          child: Text(
-            widget.profile.name,
-            style: TextStyle(
-                fontSize: 30, color: Colors.white, fontWeight: FontWeight.bold),
+          child: Container(
+           color: Colors.transparent,
+            padding: const EdgeInsets.symmetric(vertical: 15,horizontal: 15),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                NameHero(profile: widget.profile,),
+
+                Padding(
+                  padding: const EdgeInsets.only(left: 8,bottom: 4),
+                  child: AgeHero(profile: widget.profile),
+                )
+              ],
+            ),
           ),
         ));
   }
@@ -147,14 +160,17 @@ class _CardProfileState extends State<CardProfile> {
           left: 0,
           top: 0,
           right: 0,
-          child: Row(children: [
-            for (int i = 0; i < widget.profile.profiles.length; i++)
-              Expanded(
-                child: IndicatorTab(
-                  selected: i == indexSelected,
-                ),
-              )
-          ]));
+          child: Hero(
+            tag: widget.profile.id+"indicator",
+            child: Row(children: [
+              for (int i = 0; i < widget.profile.profiles.length; i++)
+                Expanded(
+                  child: IndicatorTab(
+                    selected: i == indexSelected,
+                  ),
+                )
+            ]),
+          ));
     else
       return Container();
   }

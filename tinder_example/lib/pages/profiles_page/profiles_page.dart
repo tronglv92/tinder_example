@@ -4,6 +4,9 @@ import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:interpolate/interpolate.dart';
 import 'package:page_transition/page_transition.dart';
 import 'package:tinder_example/models/profile.dart';
+import 'package:tinder_example/pages/detail_profile_page/info_detail_profile.dart';
+import 'package:tinder_example/pages/detail_profile_page/bottom_detail_profile.dart';
+import 'package:tinder_example/pages/detail_profile_page/circle_down_button.dart';
 import 'package:tinder_example/pages/detail_profile_page/detail_profile_page.dart';
 
 import 'package:tinder_example/widgets/appbar_empty.dart';
@@ -72,12 +75,14 @@ class _ProfilesPageState extends State<ProfilesPage>
   int indexProfileSelected = 0;
   PageController _pageController;
 
+  bool _modeDetailPage = false;
+
   @override
   void initState() {
     // TODO: implement initState
 
     super.initState();
-    _pageController=PageController(initialPage: 0);
+    _pageController = PageController(initialPage: 0);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       initAnimation();
     });
@@ -273,15 +278,17 @@ class _ProfilesPageState extends State<ProfilesPage>
     return (math.pi * degree) / 180;
   }
 
-  GestureDetector _onGesture({Widget child, Profile lastProfile}) {
+  Widget _onGesture({Widget child, Profile lastProfile}) {
     final Size size = MediaQuery.of(context).size;
-    if (lastProfile != null) {
+    if (lastProfile != null && _modeDetailPage==false) {
       return GestureDetector(
           onPanDown: (DragDownDetails dragDown) {
             _controllerSpringY?.stop();
             _controllerSpringX?.stop();
             _controllerSwipeX?.stop();
             _controllerSwipeY?.stop();
+
+
           },
           onPanStart: (DragStartDetails dragStart) {},
           onPanUpdate: (DragUpdateDetails dragDetail) {
@@ -310,9 +317,10 @@ class _ProfilesPageState extends State<ProfilesPage>
                 }
               }
             }
+
           },
           onTapUp: (TapUpDetails detail) {
-            // LEFT TAP
+
             if (detail.localPosition.dx < size.width / 2) {
               if (indexProfileSelected > 0) {
                 // setState(() {
@@ -320,7 +328,6 @@ class _ProfilesPageState extends State<ProfilesPage>
                 // });
                 indexProfileSelected--;
                 _pageController.jumpToPage(indexProfileSelected);
-
               }
             }
             // RIGHT TAP
@@ -328,7 +335,6 @@ class _ProfilesPageState extends State<ProfilesPage>
               if (indexProfileSelected < lastProfile.profiles.length - 1) {
                 indexProfileSelected++;
                 _pageController.jumpToPage(indexProfileSelected);
-
               }
             }
           },
@@ -338,13 +344,25 @@ class _ProfilesPageState extends State<ProfilesPage>
     }
   }
 
-  void onPressDetail(Profile profile) {
-    Navigator.push(
+  void onPressDetail(Profile profile) async{
+     int result= await Navigator.push(
         context,
         PageTransition(
             type: PageTransitionType.fade,
-            child: DetailProfilePage(profile: profile)));
+            duration: Duration(milliseconds: 400),
+            reverseDuration: Duration(milliseconds: 200),
+            child: DetailProfilePage(profile: profile,index: indexProfileSelected,)));
+     if(result!=null)
+       {
+         setState(() {
+           indexProfileSelected=result;
+           _pageController.jumpToPage(result);
+         });
+       }
+
   }
+
+
 
   Widget _buildListCard() {
     List<Profile> profilesRemain = [];
@@ -360,26 +378,27 @@ class _ProfilesPageState extends State<ProfilesPage>
         lastProfile = profilesUser[profilesUser.length - 1];
       }
     }
-
     final Size size = MediaQuery.of(context).size;
     final double statusBarHeight = MediaQuery.of(context).padding.top;
 
+    double heightOfCard =
+        size.height - HEIGHT_HEADER - HEIGHT_FOOTER - statusBarHeight;
+    // double heightCardRemain=
     double rotateX = ipRotation != null ? ipRotation.eval(translationX) : 0;
     double rotateY = ipRotationY != null ? ipRotationY.eval(translationY) : 0;
 
     double rotateZ = rotateX + rotateY;
     double likeOpacity =
-        ipLikeOpacity != null ? ipLikeOpacity.eval(translationX) : 0;
+    ipLikeOpacity != null ? ipLikeOpacity.eval(translationX) : 0;
     double nopeOpacity =
-        ipNopeOpacity != null ? ipNopeOpacity.eval(translationX) : 0;
+    ipNopeOpacity != null ? ipNopeOpacity.eval(translationX) : 0;
     double superLikeOpacity =
-        ipSuperLikeOpacity != null ? ipSuperLikeOpacity.eval(translationY) : 0;
+    ipSuperLikeOpacity != null ? ipSuperLikeOpacity.eval(translationY) : 0;
 
     double valueTranslation = math.sqrt(translationX * translationX +
         (translationY - HEIGHT_HEADER) * (translationY - HEIGHT_HEADER));
 
-    double heightOfCard =
-        size.height - HEIGHT_HEADER - HEIGHT_FOOTER - statusBarHeight;
+
     double heightCardRemain = ipHeightCardRemain != null
         ? ipHeightCardRemain.eval(valueTranslation)
         : heightOfCard - SIZE_SMALLER;
@@ -390,7 +409,7 @@ class _ProfilesPageState extends State<ProfilesPage>
         ? ipTopCardRemain.eval(valueTranslation)
         : HEIGHT_HEADER + SIZE_SMALLER;
     double leftCardRemain =
-        ipLeftCardRemain != null ? ipLeftCardRemain.eval(valueTranslation) : 15;
+    ipLeftCardRemain != null ? ipLeftCardRemain.eval(valueTranslation) : 15;
 
     return Positioned.fill(
       child: Stack(
@@ -411,31 +430,31 @@ class _ProfilesPageState extends State<ProfilesPage>
           //Last Card
           lastProfile != null
               ? Positioned(
-                  top: translationY,
-                  left: translationX,
-                  height: heightOfCard,
-                  width: size.width,
-                  child: _onGesture(
-                      lastProfile: lastProfile,
-                      child: Transform.rotate(
-                          angle: rotateZ,
-                          child: CardProfile(
-                            profile: lastProfile,
-                            likeOpacity: likeOpacity,
-                            nopeOpacity: nopeOpacity,
-                            superLikeOpacity: superLikeOpacity,
-                            widthCard: size.width,
-                            heightCard: heightOfCard,
-
-                            onPressDetail: onPressDetail,
-                            pageController: _pageController,
-                            lastCard: true,
-                          ))),
-                )
+            top: translationY,
+            left: translationX,
+            height: heightOfCard,
+            width: size.width,
+            child: _onGesture(
+                lastProfile: lastProfile,
+                child: Transform.rotate(
+                    angle: rotateZ,
+                    child: CardProfile(
+                      profile: lastProfile,
+                      likeOpacity: likeOpacity,
+                      nopeOpacity: nopeOpacity,
+                      superLikeOpacity: superLikeOpacity,
+                      widthCard: size.width,
+                      heightCard: heightOfCard,
+                      onPressDetail: onPressDetail,
+                      pageController: _pageController,
+                      lastCard: true,
+                    ))),
+          )
               : Container()
         ],
       ),
     );
+
   }
 
   @override
@@ -479,25 +498,7 @@ class _ProfilesPageState extends State<ProfilesPage>
   Widget _buildFooter() {
     return Container(
       height: HEIGHT_FOOTER,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          CircleWhite(
-            child: Icon(
-              Icons.close,
-              size: 32,
-              color: Color.fromRGBO(236, 82, 136, 1.0),
-            ),
-          ),
-          CircleWhite(
-            child: Icon(
-              MaterialCommunityIcons.heart_outline,
-              size: 32,
-              color: Color.fromRGBO(110, 227, 180, 1.0),
-            ),
-          )
-        ],
-      ),
+      child: BottomDetailProfile(),
     );
   }
 }
