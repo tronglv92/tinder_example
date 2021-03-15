@@ -21,14 +21,14 @@ class DetailProfilePage extends StatefulWidget {
 }
 
 class _DetailProfilePageState extends State<DetailProfilePage> {
-  PageController _pageController;
+  PreloadPageController _pageController;
   int indexSelectedPage=0;
 
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-    _pageController=PageController(initialPage: widget.index,viewportFraction: 0.999);
+    _pageController=PreloadPageController(initialPage: widget.index);
     indexSelectedPage=widget.index;
   }
 
@@ -85,10 +85,10 @@ class _DetailProfilePageState extends State<DetailProfilePage> {
     return  Container(
       height: 400,
 
-      child: PageView.builder(
-        // physics: ClampingScrollPhysics(),
+      child: PreloadPageView.builder(
+        physics: ClampingScrollPhysics(),
         controller: _pageController,
-        // preloadPagesCount:  widget.profile.profiles.length,
+        preloadPagesCount:  widget.profile.profiles.length,
         itemBuilder: (BuildContext context, int index) {
 
           return PhotoHero(profile: widget.profile,index: index,);
