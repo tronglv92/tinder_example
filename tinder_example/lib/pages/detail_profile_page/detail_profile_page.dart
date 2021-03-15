@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
+import 'package:preload_page_view/preload_page_view.dart';
 import 'package:tinder_example/models/profile.dart';
 import 'package:tinder_example/pages/detail_profile_page/info_detail_profile.dart';
 import 'package:tinder_example/pages/detail_profile_page/circle_button.dart';
@@ -27,10 +28,16 @@ class _DetailProfilePageState extends State<DetailProfilePage> {
   void initState() {
     // TODO: implement initState
     super.initState();
-    _pageController=PageController(initialPage: widget.index);
+    _pageController=PageController(initialPage: widget.index,viewportFraction: 0.999);
     indexSelectedPage=widget.index;
   }
 
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    super.dispose();
+    _pageController?.dispose();
+  }
 
   void onPageChanged(int page)
   {
@@ -40,6 +47,7 @@ class _DetailProfilePageState extends State<DetailProfilePage> {
   }
 
   void onPressBack(){
+
     Navigator.pop(context,indexSelectedPage);
   }
   @override
@@ -49,7 +57,7 @@ class _DetailProfilePageState extends State<DetailProfilePage> {
       children: [
         Column(
           children: [
-            _buildListProfiles(),
+            _buildPhotos(),
             SizedBox(
               height: 20,
             ),
@@ -72,18 +80,18 @@ class _DetailProfilePageState extends State<DetailProfilePage> {
     ));
   }
 
-  Widget _buildListProfiles()
+  Widget _buildPhotos()
   {
     return  Container(
       height: 400,
 
       child: PageView.builder(
-        physics: ClampingScrollPhysics(),
+        // physics: ClampingScrollPhysics(),
         controller: _pageController,
+        // preloadPagesCount:  widget.profile.profiles.length,
         itemBuilder: (BuildContext context, int index) {
 
           return PhotoHero(profile: widget.profile,index: index,);
-
         },
         itemCount: widget.profile.profiles.length,
         onPageChanged: onPageChanged,

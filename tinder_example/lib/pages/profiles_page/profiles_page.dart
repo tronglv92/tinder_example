@@ -3,6 +3,7 @@ import 'package:flutter/physics.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:interpolate/interpolate.dart';
 import 'package:page_transition/page_transition.dart';
+import 'package:preload_page_view/preload_page_view.dart';
 import 'package:tinder_example/models/profile.dart';
 import 'package:tinder_example/pages/detail_profile_page/info_detail_profile.dart';
 import 'package:tinder_example/pages/detail_profile_page/bottom_detail_profile.dart';
@@ -73,7 +74,7 @@ class _ProfilesPageState extends State<ProfilesPage>
   double rotatedHeight = 0;
 
   int indexProfileSelected = 0;
-  PageController _pageController;
+  PreloadPageController _pageController;
 
   bool _modeDetailPage = false;
 
@@ -82,7 +83,8 @@ class _ProfilesPageState extends State<ProfilesPage>
     // TODO: implement initState
 
     super.initState();
-    _pageController = PageController(initialPage: 0);
+
+    _pageController = PreloadPageController(initialPage: 0);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       initAnimation();
     });
@@ -96,6 +98,7 @@ class _ProfilesPageState extends State<ProfilesPage>
     _controllerSpringY?.dispose();
     _controllerSwipeX?.dispose();
     _controllerSwipeY?.dispose();
+    _pageController?.dispose();
   }
 
   void initAnimation() {
@@ -350,7 +353,7 @@ class _ProfilesPageState extends State<ProfilesPage>
         PageTransition(
             type: PageTransitionType.fade,
             duration: Duration(milliseconds: 400),
-            reverseDuration: Duration(milliseconds: 200),
+            reverseDuration: Duration(milliseconds:300),
             child: DetailProfilePage(profile: profile,index: indexProfileSelected,)));
      if(result!=null)
        {

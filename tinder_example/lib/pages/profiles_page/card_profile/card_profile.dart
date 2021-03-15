@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:preload_page_view/preload_page_view.dart';
 import 'package:tinder_example/models/profile.dart';
 import 'package:tinder_example/pages/profiles_page/card_profile/indicator_tab.dart';
 import 'package:tinder_example/pages/profiles_page/card_profile/name_hero.dart';
@@ -31,7 +32,7 @@ class CardProfile extends StatefulWidget {
 
   final Function onPressDetail;
   final bool lastCard;
-  final PageController pageController;
+  final PreloadPageController pageController;
 
   @override
   _CardProfileState createState() => _CardProfileState();
@@ -58,14 +59,22 @@ class _CardProfileState extends State<CardProfile> {
                     widget.profile.profiles[0],
                     fit: BoxFit.cover,
                   )
-                : PageView.builder(
+                :  PreloadPageView.builder(
                     controller: widget.pageController,
                     physics: NeverScrollableScrollPhysics(),
                     itemBuilder: (BuildContext context, int index) {
+                      // return PhotoHero(profile: widget.profile,index: index,);
+                      if(index==indexSelected)
+                        {
+                          return PhotoHero(profile: widget.profile,index: index,);
+                        }
+                      else{
+                        return Image.asset(widget.profile.profiles[index],fit: BoxFit.cover,);
+                      }
 
-                      return PhotoHero(profile: widget.profile,index: index,);
                     },
                     itemCount: widget.profile.profiles.length,
+              preloadPagesCount: widget.profile.profiles.length,
                     onPageChanged: (int page) {
                       setState(() {
                         indexSelected = page;
